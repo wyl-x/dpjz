@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>io</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="./vue.js"></script>
+</head>
+<body>
+<div id="app">
+    <li v-for="item in rooms" :key="item.roomName">
+        <span>{{item.roomName}} - ({{item.count}})人</span>
+        <button @click="join(item)">join</button>
+    </li>
+</div>
+
+<script>
+    let socket = io();
+
+    vm = new Vue({
+        el: '#app',
+        data() {
+            return {
+                rooms: []
+            }
+        },
+        created() {
+            socket.on('rooms', rooms => {
+                const arr = []
+                Object.keys(rooms).forEach(roomName => {
+                    arr.push({
+                        roomName,
+                        count: rooms[roomName]
+                    })
+                })
+                this.rooms = arr
+            })
+        },
+        methods: {
+            join(room) {
+                socket.emit('join', room.roomName);
+            }
+        }
+    })
+</script>
+</body>
+</html>
