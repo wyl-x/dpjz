@@ -4,54 +4,50 @@ const http = require('http');
 const server = http.createServer(app);
 const {Server} = require("socket.io");
 const io = new Server(server);
-
-let timer
+const db = require('./db');
 
 app.use(express.static('public'))
 
-
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
-
 io.on('connection', (socket) => {
     console.log('a user connected', socket.id);
-    startBroadcastRooms()
-    socket.on('join', (roomName) => {
-        socket.join(roomName)
+    broadcast('room')
+
+    socket.on('join', (room, user) => {
+        db.update('user', user.id, {...user, roomId: room.id})
+        broadcast('record')
+        broadcast('user')
     });
 
+    socket.on('leave', (roomName) => {
+        socket.leave(roomName)
+        broadcast('room')
+    });
 
-    socket.on('rooms', (roomName) => {
-        socket.emit('rooms', [...socket.rooms])
+    socket.on('add-room', (data) => {
+        db.create('room', data)
+        broadcast('room')
+    });
+    socket.on('del-room', (id) => {
+        db.delete('room', id)
+        broadcast('room')
+    });
+    socket.on('rooms', () => {
+        broadcast('room')
     });
 
     socket.on("disconnect", (reason) => {
-        // ...
         console.log(`${socket.id} disconnect`, reason);
+    });
+
+    socket.on('add-record', (data) => {
+        db.create('record', data)
+        broadcast('record')
     });
 });
 
 
-function startBroadcastRooms(){
-    clearInterval(timer)
-    timer = setInterval(() => {
-        let roomMap = {}
-        for (const socketItem of io.sockets.sockets) {
-            const [id, socket] = socketItem
-            for (const room of socket.rooms) {
-                roomMap[room] = roomMap[room] ? roomMap[room] + 1 : 1
-            }
-        }
-        console.log(roomMap);
-
-        if (Object.keys(roomMap).length === 0) {
-            clearInterval(timer)
-        }
-
-        io.emit('rooms', roomMap)
-
-    }, 2000)
+function broadcast(name) {
+    io.emit(name + 's', db.findAll(name))
 }
 
 server.listen(3000, () => {
