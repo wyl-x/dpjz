@@ -3,8 +3,17 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const {Server} = require("socket.io");
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "*"
+    }
+});
 const db = require('./db');
+
+// app.use('/', function (req, res, next) {
+//     res.header("Access-Control-Allow-Origin", "*");
+//     next();
+// });
 
 app.use(express.static('public'))
 
@@ -48,7 +57,6 @@ io.on('connection', (socket) => {
         broadcast('record')
     });
 });
-
 
 function broadcast(name) {
     io.emit(name + 's', db.findAll(name))
