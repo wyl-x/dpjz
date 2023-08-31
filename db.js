@@ -21,7 +21,7 @@ class Db {
     }
 
     create(name, data) {
-        const id = Date.now()
+        const id = `${Date.now()}`
         data.id = id
         const json = this.read(name)
         json[id] = data

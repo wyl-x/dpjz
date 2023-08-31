@@ -11,11 +11,13 @@ app.use(express.static('public'))
 io.on('connection', (socket) => {
     console.log('a user connected', socket.id);
     broadcast('room')
+    broadcast('user')
+    broadcast('record')
 
-    socket.on('join', (room, user) => {
-        db.update('user', user.id, {...user, roomId: room.id})
-        broadcast('record')
+    socket.on('join', (roomId, user) => {
+        db.update('user', user.id, {...user, roomId})
         broadcast('user')
+        broadcast('record')
     });
 
     socket.on('leave', (roomName) => {
@@ -27,10 +29,12 @@ io.on('connection', (socket) => {
         db.create('room', data)
         broadcast('room')
     });
+
     socket.on('del-room', (id) => {
         db.delete('room', id)
         broadcast('room')
     });
+
     socket.on('rooms', () => {
         broadcast('room')
     });

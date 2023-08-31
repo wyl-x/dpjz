@@ -8,36 +8,47 @@
 </head>
 <body>
 <div id="app">
+    <input type="text" @blur="storeUserName" v-model="userName">
+
     <button @click="addRoom()">addRoom</button>
-    <button @click="addRecord()">集中</button>
 
     <li v-for="(item, key) in rooms" :key="item.id">
-        <span> ({{ item.name }})</span>
+        <span> {{ item.name }}</span>
 
-        <button @click="join(item)">加入</button>
+        <button @click="join(item.id)">加入</button>
         <button @click="delRoom(item.id)">删除</button>
     </li>
     <hr>
     <div v-if="currentRoom">
         <div> 房间号: {{ currentRoom }}</div>
-        <li v-for="item in currentRoomUsers">
+        <li v-for="item in currentRoomUsers" :key="item.id">
             {{ userMap[item.id] }}
             <strong>{{ stat[item.id] }}</strong>
+
+            <template v-if="userId !== item.id">
+                <button @click="sendTo(item.id, 1)">+1</button>
+                <button @click="sendTo(item.id, 2)">+2</button>
+            </template>
         </li>
     </div>
 
     <div v-if="currentRoom">
-        <div> 历史</div>
-        <li v-for="item in currentRoomRecords">
+        <div>历史</div>
+        <li v-for="item in currentRoomRecords" :key="item.id">
             {{ userMap[item.from] }} -->
 
-            <span v-for="(it, idx) in item.to">{{ userMap[it] }} {{ item.toValue[idx] }}元</span>、
+            <span v-for="(it, idx) in item.to">
+                <span v-if="idx">、</span>
+                {{ userMap[it] }} {{ item.toValue[idx] }}
+            </span>
         </li>
     </div>
 </div>
 
 <script>
     let userId = localStorage.getItem('userId')
+    let userName = localStorage.getItem('userName')
+    let currentRoom = localStorage.getItem('currentRoom')
     if (!userId) {
         userId = `${Date.now()}-user-${Math.random()}`.replace('.', '')
         localStorage.setItem('userId', userId)
@@ -51,8 +62,9 @@
                 rooms: [],
                 users: [],
                 records: [],
-                currentRoom: '',
-                id: ''
+                currentRoom,
+                userName,
+                userId,
             }
         },
         computed: {
@@ -97,9 +109,11 @@
                 const result = {}
                 this.users.forEach(user => {
                     let count = 0
-                    this.records.forEach(item => {
-                        count += (item[user.id] || 0)
-                    })
+                    this.records
+                        .filter(item => item.roomId === this.currentRoom)
+                        .forEach(item => {
+                            count += (item[user.id] || 0)
+                        })
                     result[user.id] = count
                 })
                 return result
@@ -122,23 +136,30 @@
             })
         },
         methods: {
+            storeUserName() {
+                localStorage.setItem('userName', this.userName)
+            },
             addRoom() {
                 socket.emit('add-room', {name: '房间' + Date.now()});
             },
-            addRecord() {
+            sendTo(user, value) {
+                if (user === userId) {
+                    return
+                }
                 socket.emit('add-record', {
                     roomId: this.currentRoom,
-                    "1693415025180-user-09218579040849937": -1,
-                    "1693415040759-user-016372864506026197": +1,
+                    [userId]: -1 * value,
+                    [user]: value,
                 });
             },
             delRoom(id) {
                 socket.emit('del-room', id);
             },
 
-            join(room) {
-                socket.emit('join', room, {id: userId, name: '张三'});
-                this.currentRoom = room.id
+            join(roomId) {
+                socket.emit('join', roomId, {id: userId, name: this.userName});
+                localStorage.setItem('currentRoom', roomId)
+                this.currentRoom = roomId
             },
 
             leave(room) {
