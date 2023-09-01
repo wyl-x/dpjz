@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>io</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.socket.io/2.0.4/socket.io.min.js"></script>
     <script src="./vue.js"></script>
+    <link rel="stylesheet" href="./pub.css">
 </head>
 <body>
 <div id="app">
@@ -53,119 +54,128 @@
         userId = `${Date.now()}-user-${Math.random()}`.replace('.', '')
         localStorage.setItem('userId', userId)
     }
-    let socket = io();
+    let socket;
 
     vm = new Vue({
         el: '#app',
+        created() {
+            socket = io("http://81.68.145.84:3000");
+            console.log(socket, "socket");
+
+            socket.on("rooms", (rooms) => {
+                console.log("rooms", rooms);
+                this.rooms = rooms;
+            });
+
+            socket.on("records", (records) => {
+                console.log("records", records);
+                this.records = records;
+            });
+
+            socket.on("users", (users) => {
+                console.log("users", users);
+                this.users = users;
+            });
+        },
         data() {
             return {
+                items: [1, 2, 4, 8],
                 rooms: [],
                 users: [],
                 records: [],
                 currentRoom,
                 userName,
                 userId,
-            }
+            };
         },
         computed: {
             currentRoomUsers() {
-                return this.users.filter(item => item.roomId === this.currentRoom)
+                return this.users.filter((item) => item.roomId === this.currentRoom);
             },
             currentRoomRecords() {
-                return this.records.filter(item => item.roomId === this.currentRoom).map(item => {
-                    let from = 'none'
-                    let fromValue = 0
-                    let to = []
-                    let toValue = []
-                    Object.keys(item).forEach(key => {
-                        if (key.includes('-user-')) {
-                            const value = item[key]
-                            if (value < 0) {
-                                from = key
-                                fromValue = value
-                            } else {
-                                to.push(key)
-                                toValue.push(value)
+                return this.records
+                    .filter((item) => item.roomId === this.currentRoom)
+                    .map((item) => {
+                        let from = "none";
+                        let fromValue = 0;
+                        let to = [];
+                        let toValue = [];
+                        Object.keys(item).forEach((key) => {
+                            if (key.includes("-user-")) {
+                                const value = item[key];
+                                if (value < 0) {
+                                    from = key;
+                                    fromValue = value;
+                                } else {
+                                    to.push(key);
+                                    toValue.push(value);
+                                }
                             }
-                        }
-                    })
+                        });
 
-                    return {
-                        from,
-                        fromValue,
-                        to,
-                        toValue
-                    }
-                })
+                        return {
+                            time: dayjs(+item.id).format("MM-DD HH:mm:ss"),
+                            from,
+                            fromValue,
+                            to,
+                            toValue,
+                        };
+                    })
+                    .reverse();
             },
             userMap() {
-                const result = {}
-                this.users.forEach(item => {
-                    result[item.id] = item.name
-                })
-                return result
+                const result = {};
+                this.users.forEach((item) => {
+                    result[item.id] = item.name;
+                });
+                return result;
             },
             stat() {
-                const result = {}
-                this.users.forEach(user => {
-                    let count = 0
+                const result = {};
+                this.users.forEach((user) => {
+                    let count = 0;
                     this.records
-                        .filter(item => item.roomId === this.currentRoom)
-                        .forEach(item => {
-                            count += (item[user.id] || 0)
-                        })
-                    result[user.id] = count
-                })
-                return result
-            }
+                        .filter((item) => item.roomId === this.currentRoom)
+                        .forEach((item) => {
+                            count += item[user.id] || 0;
+                        });
+                    result[user.id] = count;
+                });
+                return result;
+            },
         },
-        created() {
-            socket.on('rooms', rooms => {
-                console.log('rooms', rooms)
-                this.rooms = rooms
-            })
 
-            socket.on('records', records => {
-                console.log('records', records)
-                this.records = records
-            })
-
-            socket.on('users', users => {
-                console.log('users', users)
-                this.users = users
-            })
-        },
         methods: {
             storeUserName() {
-                localStorage.setItem('userName', this.userName)
+                localStorage.setItem("userName", this.userName);
             },
             addRoom() {
-                socket.emit('add-room', {name: '房间' + Date.now()});
+                socket.emit("add-room", { name: "房间" + Date.now() });
             },
             sendTo(user, value) {
                 if (user === userId) {
-                    return
+                    return;
                 }
-                socket.emit('add-record', {
+                socket.emit("add-record", {
                     roomId: this.currentRoom,
                     [userId]: -1 * value,
                     [user]: value,
                 });
             },
             delRoom(id) {
-                socket.emit('del-room', id);
+                socket.emit("del-room", id);
             },
 
             join(roomId) {
-                socket.emit('join', roomId, {id: userId, name: this.userName});
-                localStorage.setItem('currentRoom', roomId)
-                this.currentRoom = roomId
+                socket.emit("join", roomId, { id: userId, name: this.userName });
+                localStorage.setItem("currentRoom", roomId);
+                this.currentRoom = roomId;
             },
 
             leave(room) {
-                socket.emit('leave', room);
-            }
-        }
+                socket.emit("leave", room);
+            },
+        },
     })
 </script>
 </body>

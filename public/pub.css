@@ -1,0 +1,95 @@
+.flex {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.p-10 {
+    padding: 10px;
+}
+
+.mr-10 {
+    margin-right: 10px;
+}
+
+.mb-10 {
+    margin-bottom: 10px;
+}
+
+.bb {
+    border-bottom: 1px dashed #d5d5d5;
+}
+
+
+.wrap {
+    height: 100vh;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.name-ipt {
+    margin-left: 10px;
+    padding: 2px 5px;
+    border: 1px dashed #d5d5d5;
+    font-size: 12px;
+    margin-right: 30px;
+}
+
+button {
+    height: auto;
+    line-height: 1;
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+.header {
+    border: 1px dashed #d5d5d5;
+}
+
+.room-wrap {
+    margin-top: 10px;
+    border: 1px dashed #d5d5d5;
+}
+
+.room-user-wrap {
+    margin-top: 10px;
+    border: 1px dashed #d5d5d5;
+    padding-bottom: 0;
+}
+
+.user-name {
+    min-width: 80px;
+}
+
+.num {
+    width: 30px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.red {
+    color: #f00;
+}
+
+.green {
+    color: #4cd964;
+}
+
+.his-wrap {
+    margin-top: 10px;
+    border: 1px dashed #d5d5d5;
+    overflow-y: auto;
+}
+
+.user-item {
+    justify-content: left;
+}
+
+.his-item {
+    justify-content: left;
+}
