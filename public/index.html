@@ -2,48 +2,86 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>io</title>
-    <script src="https://cdn.socket.io/2.0.4/socket.io.min.js"></script>
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>记账</title>
+    <script src="./socket.io.js"></script>
+    <script src="./dayjs.min.js"></script>
     <script src="./vue.js"></script>
+    <script src="./speaker.js"></script>
     <link rel="stylesheet" href="./pub.css">
 </head>
 <body>
 <div id="app">
-    <input type="text" @blur="storeUserName" v-model="userName">
+    <div class="wrap">
+        <div class="header flex p-10">
+            <div class="flex flex-1">
+                <div>名称:</div>
+                <input
+                        class="name-ipt flex-1"
+                        type="text"
+                        @blur="storeUserName"
+                        v-model="userName"
+                />
+            </div>
+            <button @click="addRoom()">新建房间</button>
+        </div>
 
-    <button @click="addRoom()">addRoom</button>
+        <div class="room-wrap p-10">
+            <div class="flex mb-10" v-for="(item, key) in rooms" :key="item.id">
+                <div class="flex-1"> 房间{{ item.id }}</div>
+                <button class="mr-10" @click="join(item.id)">加入</button>
+                <button @click="delRoom(item.id)">删除</button>
+            </div>
+        </div>
 
-    <li v-for="(item, key) in rooms" :key="item.id">
-        <span> {{ item.name }}</span>
+        <div class="room-user-wrap p-10" v-if="currentRoom">
+            <div class="mb-10">当前房间: {{ currentRoom }}</div>
+            <div
+                    class="user-item flex mb-10"
+                    v-for="item in currentRoomUsers"
+                    :key="item.id"
+            >
+                <div class="user-name">{{ userMap[item.id] }}</div>
+                <div
+                        class="num"
+                        :class="{ red: stat[item.id] < 0, green: stat[item.id] > 0 }"
+                >
+                    {{ stat[item.id] }}
+                </div>
 
-        <button @click="join(item.id)">加入</button>
-        <button @click="delRoom(item.id)">删除</button>
-    </li>
-    <hr>
-    <div v-if="currentRoom">
-        <div> 房间号: {{ currentRoom }}</div>
-        <li v-for="item in currentRoomUsers" :key="item.id">
-            {{ userMap[item.id] }}
-            <strong>{{ stat[item.id] }}</strong>
+                <template v-if="userId !== item.id">
+                    <div style="justify-content: flex-end" class="flex flex-1">
+                        <button
+                                v-for="it in items"
+                                :key="it"
+                                class="mr-10"
+                                @click="sendTo(item.id, it)"
+                        >
+                            + {{ it }}
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
 
-            <template v-if="userId !== item.id">
-                <button @click="sendTo(item.id, 1)">+1</button>
-                <button @click="sendTo(item.id, 2)">+2</button>
-            </template>
-        </li>
+        <div class="his-wrap flex-1 p-10" v-if="currentRoom">
+            <div
+                    class="his-item flex bb pb-10 mb-10"
+                    v-for="item in currentRoomRecords"
+                    :key="item.id"
+            >
+                <div class="mr-10">{{ item.time }}:</div>
+                <div class="mr-10">[<span class="red">{{ userMap[item.from] }}</span>] 转账给</div>
+                <div class="flex" v-for="(it, idx) in item.to" :key="it">
+                    <div v-if="idx">、</div>
+                    <div class="mr-10">[<span class="green">{{ userMap[it] }}</span>]</div>
+                    <div>{{ item.toValue[idx] }}</div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div v-if="currentRoom">
-        <div>历史</div>
-        <li v-for="item in currentRoomRecords" :key="item.id">
-            {{ userMap[item.from] }} -->
-
-            <span v-for="(it, idx) in item.to">
-                <span v-if="idx">、</span>
-                {{ userMap[it] }} {{ item.toValue[idx] }}
-            </span>
-        </li>
-    </div>
 </div>
 
 <script>
@@ -55,12 +93,20 @@
         localStorage.setItem('userId', userId)
     }
     let socket;
+    let speaker;
 
     vm = new Vue({
         el: '#app',
         created() {
-            socket = io("http://81.68.145.84:3000");
-            console.log(socket, "socket");
+            if (window.SpeechSynthesisUtterance) {
+                speaker = new Speaker()
+            }
+
+            socket = io();
+
+            if (this.currentRoom) {
+                this.join(this.currentRoom)
+            }
 
             socket.on("rooms", (rooms) => {
                 console.log("rooms", rooms);
@@ -75,6 +121,32 @@
             socket.on("users", (users) => {
                 console.log("users", users);
                 this.users = users;
+            });
+
+            socket.on("speak", (speak) => {
+                if (!window.SpeechSynthesisUtterance) {
+                    return
+                }
+                let from
+                let to
+                let value
+                if (speak.roomId === this.currentRoom) {
+                    console.log("speak", speak);
+                    Object.keys(speak).forEach((key) => {
+                        if (key.includes("-user-")) {
+                            const valueNum = speak[key];
+                            if (valueNum < 0) {
+                                from = this.userMap[key];
+                            } else {
+                                to = this.userMap[key]
+                                value = valueNum;
+                            }
+                        }
+                    });
+
+                    speaker.change(`${from}转给${to}${value}元`)
+
+                }
             });
         },
         data() {
@@ -150,7 +222,7 @@
                 localStorage.setItem("userName", this.userName);
             },
             addRoom() {
-                socket.emit("add-room", { name: "房间" + Date.now() });
+                socket.emit("add-room", {name: "房间" + Date.now()});
             },
             sendTo(user, value) {
                 if (user === userId) {
@@ -167,7 +239,7 @@
             },
 
             join(roomId) {
-                socket.emit("join", roomId, { id: userId, name: this.userName });
+                socket.emit("join", roomId, {id: userId, name: this.userName});
                 localStorage.setItem("currentRoom", roomId);
                 this.currentRoom = roomId;
             },

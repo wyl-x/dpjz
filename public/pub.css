@@ -44,7 +44,7 @@ button {
     height: auto;
     line-height: 1;
     font-size: 12px;
-    padding: 5px 10px;
+    padding: 5px 12px;
 }
 
 .header {
@@ -54,6 +54,7 @@ button {
 .room-wrap {
     margin-top: 10px;
     border: 1px dashed #d5d5d5;
+    padding-bottom: 0;
 }
 
 .room-user-wrap {
@@ -63,7 +64,7 @@ button {
 }
 
 .user-name {
-    min-width: 80px;
+    min-width: 60px;
 }
 
 .num {
@@ -73,11 +74,11 @@ button {
 }
 
 .red {
-    color: #f00;
+    color: orangered;
 }
 
 .green {
-    color: #4cd964;
+    color: green;
 }
 
 .his-wrap {

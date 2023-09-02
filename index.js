@@ -24,6 +24,7 @@ io.on('connection', (socket) => {
     broadcast('record')
 
     socket.on('join', (roomId, user) => {
+        socket.join(roomId)
         db.update('user', user.id, {...user, roomId})
         broadcast('user')
         broadcast('record')
@@ -55,7 +56,9 @@ io.on('connection', (socket) => {
     socket.on('add-record', (data) => {
         db.create('record', data)
         broadcast('record')
+        socket.to(data.roomId).emit('speak', data)
     });
+
 });
 
 function broadcast(name) {
