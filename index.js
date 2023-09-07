@@ -24,6 +24,14 @@ io.on('connection', (socket) => {
     broadcast('record')
 
     socket.on('join', (roomId, user) => {
+        // 若用户名已存在,更新客户端userId
+        const users = db.findAll('user')
+        const exists = users.find(item => item.name === user.name)
+        if (exists && exists.id !== user.id) {
+            socket.emit('update-user-id', exists)
+            return
+        }
+
         socket.join(roomId)
         db.update('user', user.id, {...user, roomId})
         broadcast('user')

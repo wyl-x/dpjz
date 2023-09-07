@@ -16,7 +16,7 @@
     <div class="wrap">
         <div class="header flex p-10">
             <div class="flex flex-1">
-                <div>名称:</div>
+                <div>昵称:</div>
                 <input
                         class="name-ipt flex-1"
                         type="text"
@@ -28,6 +28,7 @@
         </div>
 
         <div class="room-wrap p-10">
+            <div class="mb-10 sub-title">房间列表</div>
             <div class="flex mb-10" v-for="(item, key) in rooms" :key="item.id">
                 <div class="flex-1"> 房间{{ item.id }}</div>
                 <button class="mr-10" @click="join(item.id)">加入</button>
@@ -35,8 +36,8 @@
             </div>
         </div>
 
-        <div class="room-user-wrap p-10" v-if="currentRoom">
-            <div class="mb-10">当前房间: {{ currentRoom }}</div>
+        <div class="room-user-wrap" v-if="currentRoom">
+            <div class="mb-10 sub-title">当前房间: {{ currentRoom }}</div>
             <div
                     class="user-item flex mb-10"
                     v-for="item in currentRoomUsers"
@@ -47,7 +48,7 @@
                         class="num"
                         :class="{ red: stat[item.id] < 0, green: stat[item.id] > 0 }"
                 >
-                    {{ stat[item.id] }}
+                    {{stat[item.id] > 0 ? '+' : ''}}{{ stat[item.id] }}
                 </div>
 
                 <template v-if="userId !== item.id">
@@ -55,7 +56,6 @@
                         <button
                                 v-for="it in items"
                                 :key="it"
-                                class="mr-10"
                                 @click="sendTo(item.id, it)"
                         >
                             + {{ it }}
@@ -70,6 +70,7 @@
                     class="his-item flex bb pb-10 mb-10"
                     v-for="item in currentRoomRecords"
                     :key="item.id"
+                    :class="{ split: item.shouldSplit }"
             >
                 <div class="mr-10">{{ item.time }}:</div>
                 <div class="mr-10">[<span class="red">{{ userMap[item.from] }}</span>] 转账给</div>
@@ -123,6 +124,14 @@
                 this.users = users;
             });
 
+            socket.on('update-user-id', (user) => {
+                console.log("update-user-id", user);
+                localStorage.setItem('userId', user.id)
+                this.userId = user.id
+                userId = user.id
+                this.join(this.currentRoom)
+            });
+
             socket.on("speak", (speak) => {
                 if (!window.SpeechSynthesisUtterance) {
                     return
@@ -165,6 +174,7 @@
                 return this.users.filter((item) => item.roomId === this.currentRoom);
             },
             currentRoomRecords() {
+                let prev = null
                 return this.records
                     .filter((item) => item.roomId === this.currentRoom)
                     .map((item) => {
@@ -185,7 +195,11 @@
                             }
                         });
 
+                        const shouldSplit = prev && dayjs(+prev.id).format("YYYY-MM-DD HH:mm") !== dayjs(+item.id).format("YYYY-MM-DD HH:mm")
+                        prev = item
+
                         return {
+                            shouldSplit,
                             time: dayjs(+item.id).format("MM-DD HH:mm:ss"),
                             from,
                             fromValue,
@@ -239,6 +253,7 @@
             },
 
             join(roomId) {
+                if (!this.userName) return alert('请输入昵称')
                 socket.emit("join", roomId, {id: userId, name: this.userName});
                 localStorage.setItem("currentRoom", roomId);
                 this.currentRoom = roomId;
